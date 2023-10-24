@@ -1,0 +1,154 @@
+# %% [markdown]
+# > This project consists of several parts. Due to technocal reasons, explanations are given separately from code. 
+
+# %% [markdown]
+# This project goal is to practice EDA (Exploraroty data analysis) in python. The dataset used here was downloaded from kaggel website [1], from Vehicle Insurance Sales Prediction project. Various analyses were conducted on this data set before and posted on multiple platforms, e.g., analyticsvidhya, kaggel, github pages [1-3].
+
+# %% [markdown]
+# ## EDA definition
+# 
+# ### Eхploratory data anaysis is a set of methods used for:
+# - to check the data sets for quality and to prepare datasets for future analysis. For example, to check for the presence of missing values, zero values, errors or outliers. Data can be prepared (or cleaned) for downstream analysis by removing, substituting or modifying sub-sets of data;
+# - to veryfy the data sets suitablity for downstream analysis and discovering relationships between variables. For example, checking variability and distribution of variabes, linearity and correlation between dependent and independent variables and variables crosscorrelation;
+# - produce descriptive statistics records, e.g. median, mean, range, percentile;
+# - to visualize data sets and relationaships between variables using scatterplots, histograms, heatmaps, box plots etc;
+# - to generate a hypothesis about variables relationships and to propose a method for hypothesis testing;
+# - to carry out preparatory data modifications for downstream analysis. For example, reduction of data complexity/dimension  with data clustering. Also, to perform feature engineering, e.g. data scaling, normalization, encoding, creating derived variabes if required.
+# 
+
+# %% [markdown]
+# 
+# ### The EDA plan for this project is:
+# 
+# Using statistical and visualization methods to check the datasets for:
+# 
+# 1. Data description and variables type;
+# 2. Presence of zeroes or missing values;
+# 3. Variables distribution and variability. Descriptive statistics;
+# 4. Outliers;
+# 5. Variables cross-correlation;
+# 6. Independent and dependent variables relationships (if appropritate);
+# 7. Propose a downstream method of analysis (this project is focusing on prediction client's decision to buy or not to buy a car insurance);
+# 8. If necessary, to modify the data for downstream analysis.
+
+# %% [markdown]
+# ### 1. Data description and variables type
+# 
+# The data used here consists of 3 (three) data sets: training data (dataframe trainD); test data (dataframe testD) and customer decision data (files: train.csv, test.csv and sample_submission.csv, correspondingly). Training data and test data are dataframes with 12 and 11 columns (variables), correspondingly. 11 variables are the same for both trainD and testD sets. The 12th column (Response) is present only in TrainD dataset.
+# 
+# Following definitions on data types given in [5], variables in trainD and testD fataframes have these properties:
+# 
+# |#|Variable|Description|Variable type [5]|dtype
+# |-|--------|-----------|-----------------|------
+# |1|id------|customer ID|categorical------|int64
+# |2|Gender--|cust. Gen.-|categorical------|object
+# |3|Age-----|cust. Age--|quantitative-----|int64
+# |4|Driving_|0 - no DL
+     Licence-|1 - DL-----|categorical------|int64
+# |5|Region
+     Code----|Unique
+              code for the region of the customer
+                         |categorical------|float64
+# |6|Prev.
+    _Insured-|1 - has Vehicle Insurance
+              0 - doesn't have Vehicle Insurance
+                         |categorical------|int64
+# |7|Vehicle
+    _Age-----|Age of the Vehicle
+                         |categorical------|object
+# |8|Vehicle
+    _Damage--|1 - Customer got his/her vehicle damaged in the past
+              0 - Customer didn't get his/her vehicle damaged in the past
+                        |categorical-------|object
+# |9|Annual_
+    Premium--|The amount customer needs to pay as premium in the year
+                        |quantitative------|float64
+# |10|Policy_
+      Sales_
+      Channel|Anonymized Code for the channel of outreaching to the customer
+                        |categorical-------|float64
+# |11|Vintage|Number of Days, Customer has been associated with the company
+                        |quantitative------|int64
+# |12|Response|1 - Customer is interested
+               0 - Customer is not interested
+                        |categorical-------|int64
+# 
+
+# %% [markdown]
+# By looking at the data description above,from 12 variables, three variables are quantitative while the rest are categorical. Two categorical variables ("Region Code" and "Policy_sales_channel") have dtype identified as float64. Nominal data does not have any mathematical meaning, it is basically a label, therefore the data type float64 might not be a proper data format here. Before changing this data type to integer, lets check if there are any non zero digits after decimal point in "Region Code" and "Policy_sales_channel" columns. If any non zero digit is identified, corresponding user ID will be added to a list.
+
+# %%
+# code
+errors_train_pol = trainD.loc[trainD['Policy_Sales_Channel'] != trainD['Policy_Sales_Channel'].astype(int), 'id'].tolist()
+print("Number of errors in trainD df in 'Policy_Sales_Channel' column is:", len(errors_train_pol))
+errors_train_reg = trainD.loc[trainD['Region_Code'] != trainD['Region_Code'].astype(int), 'id'].tolist()
+print("Number of errors in trainD df in 'Region_Code' column is:", len(errors_train_reg))
+# there were no entries with digits >0 in columns
+# %%
+# lets do the same for testD df:
+errors_test_pol = testD.loc[testD['Policy_Sales_Channel'] != testD['Policy_Sales_Channel'].astype(int), 'id'].tolist()
+print("Number of errors in testD df in 'Policy_Sales_Channel' column is:", len(errors_test_pol))
+errors_test_reg = testD.loc[testD['Region_Code'] != testD['Region_Code'].astype(int), 'id'].tolist()
+print("Number of errors in testD df in 'Region_Code' column is:", len(errors_test_reg))
+
+# %% [markdown]
+# ...we can safely chage dtype to integer.
+
+# %%
+# change dtype to int for data frames trainD and testD, columns 'Policy_Sales_Channel' and 'Region_Code'.
+trainD = trainD.astype({'Region_Code':'int', 'Policy_Sales_Channel' : 'int'})
+trainD.info()
+
+# %% [markdown]
+# ### 2. Presence of zeroes or missing values
+
+# %%
+# there is no missing values as number on cells containing non null data is equal number of rows in trainD df (381109)
+# there is no missing values as number on cells containing non null data is equal number of rows in testD df (127037).
+
+# %% [markdown]
+# ### 3. Variables distribution and variability. Descriptive statistics
+# 
+# Depending on the type of data a variable has, methods used for data description and analysis differ [5]:
+# For niminal data type, we can look at frequency distribution and mode and use non-parametric stat. tets.
+# For ordinal data - frequency distribution, median and range. Non-parametric stat. tets.
+# For interval data - frequency distribution, mode, median, and mean; range, standard deviation, and variance; and use parametric statistical tests (e.g., t-test, liner regression)|
+# Ratio data - frequency distribution, mode, median, and mean; range, standard deviation, and variance and coefficient of variation. Parametric statistical tests (e.g., ANOVA, liner regression)|
+
+# %% [markdown]
+# In this dataset 9 variable are categorical ones. Lets use bar plot to visualise distrubution for this variables. First, for variables that change its values at 2 -3 levels.
+
+Here we can see that there is a small set of customers who do not have a driving licence. On the corresponding bar plot, the number of customers with no DL is so small that the bar is almost invisible. It would be better to add the label to this plot. There are 812 customers who do not have a driving licence (calculated after bar plots figures). It is a very small number, but it does not seems to be an error here).
+
+# %% [markdown]
+# Variables Region_Code and Policy_Sales_Channel have more than dozen of unique entries. For visual purposes, bar plots for these variables would be better plotted separately using PyPlot library. PyPlot allows interactively explore figures.
+
+# Region 28 process the largest number of insurance policies
+
+# policy sales channels operate with drastically different productivity ranging from about 1.5k to about 130k policices sold
+
+# %% [markdown]
+# Let us built histograms for quantitative variables. Vintage variable seems to have values in the range 12k-13k of customer joining every 10 days. Number of customers joined seems to slightly reduce last 10 days in 30 consequetive days. Age variable seems to consist of two overlapping customers populations: with average age between 20 and 30 yo and the second population with average age between 45 and 55 yo. Annual premium variable shal be plotted again using log scale on y axis. 
+
+# %% [markdown]
+# Annual premium variable points on possibility that there is two or three sub sets of customers: those who have low price policies (priced less than 8k) and those who pay a higher price (8k - 405k). There is a long tail on the right side of the histogram. It would be interesting to find if the price of insurance policy correlates with any of the variables. 
+
+
+# %% [markdown]
+# REFERENCES
+# 1. https://www.kaggle.com/code/sunayanagawde/vehicle-insurance-sales-prediction/notebook#Getting-Data
+# 2. https://www.analyticsvidhya.com/blog/2021/09/cross-sell-prediction-using-machine-learning-in-python/
+# 3. https://github.com/ankit986/HEALTH-INSURANCE-CROSS-SELL-PREDICTION/blob/main/README.md#abstract
+# 4. https://chryswoods.com/intermediate_python/regexp.html
+# 5. https://careerfoundry.com/en/blog/data-analytics/data-levels-of-measurement/
+# 6. https://pbpython.com/pandas_dtypes.html
+# 7. https://datascience.stackexchange.com/questions/9892/how-can-i-dynamically-distinguish-between-categorical-data-and-numerical-data
+# 8. https://sparkbyexamples.com/pandas/pandas-find-unique-values-from-columns/
+# 9. https://www.scribbr.com/statistics/frequency-distributions/
+# difference btw nan, zero and empty value https://www.turing.com/kb/nan-values-in-python
+# 
+# - https://www.shanelynn.ie/bar-plots-in-python-using-pandas-dataframes/
+# - https://pythonguides.com/matplotlib-bar-chart-labels/
+
+
+
